@@ -1,5 +1,6 @@
 import utils
 import vault
+import json
 
 def add_entry(name, entry_type):
     loaded_vault = vault.load_vault()
@@ -72,3 +73,21 @@ def delete_entry(name):
     vault.save_vault(loaded_vault)
 
     print(f"Deleted entry: {name}")
+
+def show_entry(name):
+    loaded_vault = vault.load_vault()
+
+    if name not in loaded_vault:
+        print(f"Entry '{name}' not found")
+        return
+
+    entry = loaded_vault[name]
+
+    hidden_fields = {"id", "type", "created", "updated"}
+    visible_entry = {
+        key: value
+        for key, value in entry.items()
+        if key not in hidden_fields
+    }
+
+    print(json.dumps(visible_entry, indent=2))

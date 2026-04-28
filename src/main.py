@@ -14,6 +14,8 @@ def main():
         entry.edit_entry(args.entry_name, utils.get_modified_fields(args, parser))
     elif args.command == "delete":
         entry.delete_entry(args.name)
+    elif args.command == "show":
+        entry.show_entry(args.name)
 
 if __name__ == "__main__": 
     main()

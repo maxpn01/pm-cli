@@ -34,6 +34,9 @@ def build_parser():
     delete_parser = subparsers.add_parser("delete")
     delete_parser.add_argument("name")
 
+    show_parser = subparsers.add_parser("show")
+    show_parser.add_argument("name")
+
     return parser
 
 def get_modified_fields(args, parser):
