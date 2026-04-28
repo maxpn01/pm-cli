@@ -1,0 +1,6 @@
+[project]
+name = "pm"
+version = "1.0.0"
+description = "cli password manager"
+requires-python = ">=3.11"
+dependencies = []
