@@ -16,7 +16,8 @@ def build_parser():
 
     add_parser = subparsers.add_parser("add")
     add_parser.add_argument("name")
-    add_type = add_parser.add_mutually_exclusive_group(required=True)
+    add_parser.set_defaults(entry_type="login")
+    add_type = add_parser.add_mutually_exclusive_group()
     add_type.add_argument("--login", action="store_const", const="login", dest="entry_type")
     add_type.add_argument("--secret", action="store_const", const="secret", dest="entry_type")
 
