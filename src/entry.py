@@ -91,3 +91,8 @@ def show_entry(name):
     }
 
     print(json.dumps(visible_entry, indent=2))
+
+def list_entries():
+    loaded_vault = vault.load_vault()
+
+    print(json.dumps(loaded_vault, indent=2))

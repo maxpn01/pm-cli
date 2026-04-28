@@ -16,6 +16,8 @@ def main():
         entry.delete_entry(args.name)
     elif args.command == "show":
         entry.show_entry(args.name)
+    elif args.command == "list":
+        entry.list_entries()
 
 if __name__ == "__main__": 
     main()
