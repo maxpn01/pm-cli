@@ -1,6 +1,6 @@
-import sys
 import json
 import uuid
+import argparse
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -13,6 +13,41 @@ def generate_id():
 
 def now_date():
     return datetime.now(timezone.utc).date().isoformat()
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="pm")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    subparsers.add_parser("gen")
+
+    add_parser = subparsers.add_parser("add")
+    add_parser.add_argument("name")
+    add_type = add_parser.add_mutually_exclusive_group(required=True)
+    add_type.add_argument("--login", action="store_const", const="login", dest="entry_type")
+    add_type.add_argument("--secret", action="store_const", const="secret", dest="entry_type")
+
+    edit_parser = subparsers.add_parser("edit")
+    edit_parser.add_argument("entry_name")
+    edit_parser.add_argument("--name")
+    edit_parser.add_argument("--username")
+    edit_parser.add_argument("--email")
+    edit_parser.add_argument("--password")
+    edit_parser.add_argument("--url")
+    edit_parser.add_argument("--notes")
+    edit_parser.add_argument("--secret-note", dest="secret_note")
+
+    delete_parser = subparsers.add_parser("delete")
+    delete_parser.add_argument("name")
+
+    return parser
+
+def get_modified_fields(args):
+    fields = ("name", "username", "email", "password", "url", "notes", "secret_note")
+    return {
+        field: getattr(args, field)
+        for field in fields
+        if getattr(args, field) is not None
+    }
 
 # VAULT FUNCTIONS
 
@@ -37,22 +72,6 @@ def save_vault(vault):
     )
 
 # ENTRY FUNCTIONS
-
-def parse_add_args(args):
-    valid_flags = {"--login", "--secret"}
-    names = [arg for arg in args if not arg.startswith("--")]
-    flags = [arg for arg in args if arg.startswith("--")]
-
-    if len(names) != 1 or any(flag not in valid_flags for flag in flags):
-        return None, None
-
-    has_login = "--login" in args
-    has_secret = "--secret" in args
-
-    if has_login == has_secret:
-        return None, None
-
-    return names[0], "login" if has_login else "secret"
 
 def add_entry(name, entry_type):
     vault = load_vault()
@@ -85,34 +104,6 @@ def add_entry(name, entry_type):
 
     print(f"Added entry: {name}")
 
-def parse_edit_args(args):
-    valid_flags = {"--name", "--username", "--email", "--password", "--url", "--notes", "--secret-note"}
-    modified = {}
-    name = None
-    i = 0
-
-    while i < len(args):
-        arg = args[i]
-
-        if arg.startswith("--"):
-            if arg not in valid_flags or i + 1 >= len(args):
-                return None, None
-
-            field = arg[2:].replace("-", "_")
-            modified[field] = args[i + 1]
-            i += 2
-        else:
-            if name is not None:
-                return None, None
-
-            name = arg
-            i += 1
-
-    if name is None or not modified:
-        return None, None
-
-    return name, modified
-
 def edit_entry(name, modified):
     vault = load_vault()
 
@@ -141,37 +132,38 @@ def edit_entry(name, modified):
 
     print(f"Edited entry: {new_name or name}")
 
+def delete_entry(name):
+    vault = load_vault()
+
+    if name not in vault:
+        print(f"Entry '{name}' not found")
+        return
+
+    del vault[name]
+
+    save_vault(vault)
+
+    print(f"Deleted entry: {name}")
+
 # MAIN
 
 def main():
-    args = sys.argv[1:]
+    parser = build_parser()
+    args = parser.parse_args()
 
-    if not args:
-        print("usage: python3 main.py <command>")
-        return
-
-    command = args[0]
-
-    if command == "gen":
+    if args.command == "gen":
         gen_vault()
-    elif command == "add":
-        name, entry_type = parse_add_args(args[1:])
+    elif args.command == "add":
+        add_entry(args.name, args.entry_type)
+    elif args.command == "edit":
+        modified_fields = get_modified_fields(args)
 
-        if name is None:
-            print("Usage: python3 main.py add <name> (--login | --secret)")
-            return
-        
-        add_entry(name, entry_type)
-    elif command == "edit":
-        name, modified_fields = parse_edit_args(args[1:])
+        if not modified_fields:
+            parser.error("edit requires at least one field to update")
 
-        if name is None:
-            print("Usage: python3 main.py edit <name> --field <value>")
-            return
-
-        edit_entry(name, modified_fields)
-    else:
-        print(f"Unknown command: {command}")
+        edit_entry(args.entry_name, modified_fields)
+    elif args.command == "delete":
+        delete_entry(args.name)
 
 
 if __name__ == "__main__": 
