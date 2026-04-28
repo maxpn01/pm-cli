@@ -23,3 +23,16 @@ def save_vault(vault):
         encoding="utf-8"
     )
 
+def erase_vault():
+    if not VAULT_PATH.exists():
+        print("Vault does not exist")
+        return
+
+    confirmation = input("Delete vault.json? [y/n]: ").strip()
+
+    if confirmation != "y":
+        print("Erase cancelled")
+        return
+
+    VAULT_PATH.unlink()
+    print("Vault deleted")

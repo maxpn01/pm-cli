@@ -18,6 +18,8 @@ def main():
         entry.show_entry(args.name)
     elif args.command == "list":
         entry.list_entries()
+    elif args.command == "erase":
+        vault.erase_vault()
 
 if __name__ == "__main__": 
     main()
