@@ -6,7 +6,7 @@ def main():
     parser = utils.build_parser()
     args = parser.parse_args()
 
-    if args.command == "gen":
+    if args.command == "init":
         vault.gen_vault()
     elif args.command == "add":
         entry.add_entry(args.name, args.entry_type)

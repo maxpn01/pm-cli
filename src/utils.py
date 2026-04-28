@@ -12,7 +12,7 @@ def build_parser():
     parser = argparse.ArgumentParser(prog="pm")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("gen")
+    subparsers.add_parser("init")
 
     add_parser = subparsers.add_parser("add")
     add_parser.add_argument("name")
