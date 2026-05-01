@@ -18,6 +18,19 @@ def main():
         entry.show_entry(args.name)
     elif args.command == "list":
         entry.list_entries()
+    elif args.command == "gen":
+        try:
+            password = utils.generate_password(
+                args.length,
+                args.uppercase,
+                args.lowercase,
+                args.numbers,
+                args.symbols,
+            )
+        except ValueError as error:
+            parser.error(str(error))
+
+        print(password)
     elif args.command == "erase":
         vault.erase_vault()
 

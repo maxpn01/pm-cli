@@ -1,5 +1,7 @@
 import uuid
 import argparse
+import secrets
+import string
 from datetime import datetime, timezone
 
 def generate_id():
@@ -39,6 +41,13 @@ def build_parser():
 
     subparsers.add_parser("list")
 
+    gen_parser = subparsers.add_parser("gen")
+    gen_parser.add_argument("--length", type=int, default=16)
+    gen_parser.add_argument("--uppercase", action="store_true")
+    gen_parser.add_argument("--lowercase", action="store_true")
+    gen_parser.add_argument("--numbers", action="store_true")
+    gen_parser.add_argument("--symbols", action="store_true")
+
     subparsers.add_parser("erase")
 
     return parser
@@ -56,3 +65,28 @@ def get_modified_fields(args, parser):
             parser.error("edit requires at least one field to update")
 
     return modified_fields
+
+def generate_password(length, uppercase, lowercase, numbers, symbols):
+    charsets = []
+
+    if uppercase:
+        charsets.append(string.ascii_uppercase)
+    if lowercase:
+        charsets.append(string.ascii_lowercase)
+    if numbers:
+        charsets.append(string.digits)
+    if symbols:
+        charsets.append(string.punctuation)
+
+    if not charsets:
+        raise ValueError("select at least one character type")
+
+    if length < len(charsets):
+        raise ValueError("length is too short for the selected character types")
+
+    password = [secrets.choice(charset) for charset in charsets]
+    all_chars = "".join(charsets)
+    password.extend(secrets.choice(all_chars) for _ in range(length - len(password)))
+
+    secrets.SystemRandom().shuffle(password)
+    return "".join(password)
