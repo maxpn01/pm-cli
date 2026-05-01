@@ -12,9 +12,10 @@ def get_current_date():
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="pm")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("init")
+    subparsers.add_parser("help")
 
     add_parser = subparsers.add_parser("add")
     add_parser.add_argument("name")
@@ -53,6 +54,39 @@ def build_parser():
     subparsers.add_parser("erase")
 
     return parser
+
+def print_command_help():
+    print("""pm - cli password manager
+
+Usage:
+  pm init
+      Create a new encrypted vault.
+
+  pm add [--login|--secret] <name>
+      Add a login or secret entry.
+
+  pm show <name>
+      Show one entry.
+
+  pm list
+      Show all entries.
+
+  pm edit <name> [--username USER] [--email EMAIL] [--password PASS]
+                 [--url URL] [--notes NOTES] [--secret-note SECRET]
+      Edit fields on an existing entry.
+
+  pm delete <name>
+      Delete an entry.
+
+  pm password
+      Change the master password.
+
+  pm gen --length 16 --uppercase --lowercase --numbers --symbols
+      Generate a random password.
+
+  pm erase
+      Delete vault.json.
+""")
 
 def get_modified_fields(args, parser):
     fields = ("name", "username", "email", "password", "url", "notes", "secret_note")

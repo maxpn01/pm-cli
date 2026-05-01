@@ -2,8 +2,19 @@
 name = "pm"
 version = "1.0.0"
 description = "cli password manager"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "argon2-cffi",
     "cryptography"
 ]
+
+[project.scripts]
+pm = "main:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["entry", "main", "utils", "vault"]
