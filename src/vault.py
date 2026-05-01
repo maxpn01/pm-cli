@@ -54,10 +54,10 @@ def save_vault(vault):
 
     save_encrypted_vault(vault, _master_password)
 
-def save_encrypted_vault(vault, password):
+def save_encrypted_vault(vault, password, reuse_salt=True):
     global _envelope
 
-    salt = get_salt()
+    salt = get_salt(reuse_salt)
     fernet = Fernet(derive_argon2id_key(password, salt))
     plaintext = json.dumps(vault).encode("utf-8")
     ciphertext = fernet.encrypt(plaintext).decode("utf-8")
@@ -77,6 +77,12 @@ def save_encrypted_vault(vault, password):
         encoding="utf-8"
     )
     _envelope = encrypted_vault
+
+def change_master_password():
+    loaded_vault = load_vault()
+    new_password = prompt_new_master_password()
+    save_encrypted_vault(loaded_vault, new_password, reuse_salt=False)
+    print("Master password changed")
 
 def decrypt_vault(encrypted_vault, password):
     global _master_password, _envelope
@@ -145,8 +151,8 @@ def derive_pbkdf2_key(password, salt, iterations):
     )
     return base64.urlsafe_b64encode(kdf.derive(password.encode("utf-8")))
 
-def get_salt():
-    if _envelope is not None and _envelope.get("kdf") == KDF:
+def get_salt(reuse_salt=True):
+    if reuse_salt and _envelope is not None and _envelope.get("kdf") == KDF:
         return base64.b64decode(_envelope["salt"])
 
     return os.urandom(16)

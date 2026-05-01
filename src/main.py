@@ -18,6 +18,8 @@ def main():
         entry.show_entry(args.name)
     elif args.command == "list":
         entry.list_entries()
+    elif args.command == "password":
+        vault.change_master_password()
     elif args.command == "gen":
         try:
             password = utils.generate_password(

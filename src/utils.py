@@ -41,6 +41,8 @@ def build_parser():
 
     subparsers.add_parser("list")
 
+    subparsers.add_parser("password")
+
     gen_parser = subparsers.add_parser("gen")
     gen_parser.add_argument("--length", type=int, default=16)
     gen_parser.add_argument("--uppercase", action="store_true")
