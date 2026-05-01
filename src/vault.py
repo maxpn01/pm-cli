@@ -4,14 +4,19 @@ import getpass
 import os
 import sys
 from pathlib import Path
+from argon2.low_level import Type, hash_secret_raw
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 VAULT_PATH = Path("vault.json")
 VAULT_VERSION = 1
-KDF = "pbkdf2-sha256"
-ITERATIONS = 600_000
+KDF = "argon2id"
+ARGON2_TIME_COST = 3
+ARGON2_MEMORY_COST = 64 * 1024
+ARGON2_PARALLELISM = 4
+PBKDF2_KDF = "pbkdf2-sha256"
+PBKDF2_ITERATIONS = 600_000
 
 _master_password = None
 _envelope = None
@@ -53,14 +58,16 @@ def save_encrypted_vault(vault, password):
     global _envelope
 
     salt = get_salt()
-    fernet = Fernet(derive_key(password, salt))
+    fernet = Fernet(derive_argon2id_key(password, salt))
     plaintext = json.dumps(vault).encode("utf-8")
     ciphertext = fernet.encrypt(plaintext).decode("utf-8")
 
     encrypted_vault = {
         "version": VAULT_VERSION,
         "kdf": KDF,
-        "iterations": ITERATIONS,
+        "time_cost": ARGON2_TIME_COST,
+        "memory_cost": ARGON2_MEMORY_COST,
+        "parallelism": ARGON2_PARALLELISM,
         "salt": base64.b64encode(salt).decode("utf-8"),
         "ciphertext": ciphertext,
     }
@@ -78,18 +85,14 @@ def decrypt_vault(encrypted_vault, password):
         print("Unsupported vault version")
         sys.exit(1)
 
-    if encrypted_vault.get("kdf") != KDF:
+    if encrypted_vault.get("kdf") not in {KDF, PBKDF2_KDF}:
         print("Unsupported vault key derivation method")
-        sys.exit(1)
-
-    if encrypted_vault.get("iterations") != ITERATIONS:
-        print("Unsupported vault key derivation iterations")
         sys.exit(1)
 
     try:
         salt = base64.b64decode(encrypted_vault["salt"], validate=True)
         ciphertext = encrypted_vault["ciphertext"].encode("utf-8")
-        fernet = Fernet(derive_key(password, salt))
+        fernet = Fernet(derive_key(password, salt, encrypted_vault))
         plaintext = fernet.decrypt(ciphertext)
         loaded_vault = json.loads(plaintext.decode("utf-8"))
     except (InvalidToken, KeyError, TypeError, ValueError, json.JSONDecodeError):
@@ -100,24 +103,57 @@ def decrypt_vault(encrypted_vault, password):
     _envelope = encrypted_vault
     return loaded_vault
 
-def derive_key(password, salt):
+def derive_key(password, salt, encrypted_vault):
+    if encrypted_vault["kdf"] == KDF:
+        return derive_argon2id_key(
+            password,
+            salt,
+            encrypted_vault["time_cost"],
+            encrypted_vault["memory_cost"],
+            encrypted_vault["parallelism"],
+        )
+
+    if encrypted_vault["kdf"] == PBKDF2_KDF:
+        return derive_pbkdf2_key(password, salt, encrypted_vault["iterations"])
+
+    raise ValueError("unsupported key derivation method")
+
+def derive_argon2id_key(
+    password,
+    salt,
+    time_cost=ARGON2_TIME_COST,
+    memory_cost=ARGON2_MEMORY_COST,
+    parallelism=ARGON2_PARALLELISM,
+):
+    key = hash_secret_raw(
+        secret=password.encode("utf-8"),
+        salt=salt,
+        time_cost=time_cost,
+        memory_cost=memory_cost,
+        parallelism=parallelism,
+        hash_len=32,
+        type=Type.ID,
+    )
+    return base64.urlsafe_b64encode(key)
+
+def derive_pbkdf2_key(password, salt, iterations):
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
         salt=salt,
-        iterations=ITERATIONS,
+        iterations=iterations,
     )
     return base64.urlsafe_b64encode(kdf.derive(password.encode("utf-8")))
 
 def get_salt():
-    if _envelope is not None and "salt" in _envelope:
+    if _envelope is not None and _envelope.get("kdf") == KDF:
         return base64.b64decode(_envelope["salt"])
 
     return os.urandom(16)
 
 def is_encrypted_vault(vault_file):
-    required_fields = {"version", "kdf", "iterations", "salt", "ciphertext"}
-    return isinstance(vault_file, dict) and required_fields.issubset(vault_file)
+    base_fields = {"version", "kdf", "salt", "ciphertext"}
+    return isinstance(vault_file, dict) and base_fields.issubset(vault_file)
 
 def migrate_plaintext_vault(vault_file):
     global _master_password
